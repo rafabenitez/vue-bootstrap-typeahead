@@ -49,137 +49,139 @@
 </template>
 
 <script>
-import VueBootstrapTypeaheadList from './VueBootstrapTypeaheadList.vue'
-import ResizeObserver from 'resize-observer-polyfill'
+    import VueBootstrapTypeaheadList from './VueBootstrapTypeaheadList.vue'
+    import ResizeObserver from 'resize-observer-polyfill'
+    import normalize from './normalize'
 
-export default {
-  name: 'VueBootstrapTypehead',
+    export default {
+        name: 'VueBootstrapTypehead',
 
-  components: {
-    VueBootstrapTypeaheadList
-  },
+        components: {
+            VueBootstrapTypeaheadList
+        },
 
-  props: {
-    size: {
-      type: String,
-      default: null,
-      validator: size => ['lg', 'sm'].indexOf(size) > -1
-    },
-    value: {
-      type: String
-    },
-    data: {
-      type: Array,
-      required: true,
-      validator: d => d instanceof Array
-    },
-    serializer: {
-      type: Function,
-      default: (d) => d,
-      validator: d => d instanceof Function
-    },
-    backgroundVariant: String,
-    textVariant: String,
-    inputClass: {
-      type: String,
-      default: ''
-    },
-    maxMatches: {
-      type: Number,
-      default: 10
-    },
-    minMatchingChars: {
-      type: Number,
-      default: 2
-    },
-    placeholder: String,
-    prepend: String,
-    append: String
-  },
+        props: {
+            size: {
+                type: String,
+                default: null,
+                validator: size => ['lg', 'sm'].indexOf(size) > -1
+            },
+            value: {
+                type: String
+            },
+            data: {
+                type: Array,
+                required: true,
+                validator: d => d instanceof Array
+            },
+            serializer: {
+                type: Function,
+                default: (d) => d,
+                validator: d => d instanceof Function
+            },
+            backgroundVariant: String,
+            textVariant: String,
+            inputClass: {
+                type: String,
+                default: ''
+            },
+            maxMatches: {
+                type: Number,
+                default: 10
+            },
+            minMatchingChars: {
+                type: Number,
+                default: 2
+            },
+            placeholder: String,
+            prepend: String,
+            append: String
+        },
 
-  computed: {
-    sizeClasses() {
-      return this.size ? `input-group input-group-${this.size}` : 'input-group'
-    },
+        computed: {
+            sizeClasses() {
+                return this.size ? `input-group input-group-${this.size}` : 'input-group'
+            },
 
-    formattedData() {
-      if (!(this.data instanceof Array)) {
-        return []
-      }
-      return this.data.map((d, i) => {
-        return {
-          id: i,
-          data: d,
-          text: this.serializer(d)
+            formattedData() {
+                if (!(this.data instanceof Array)) {
+                    return []
+                }
+                return this.data.map((d, i) => {
+                    return {
+                        id: i,
+                        data: d,
+                        text: this.serializer(d),
+                        normalizedText: normalize(this.serializer(d))
+                    }
+                })
+            }
+        },
+
+        methods: {
+            resizeList(el) {
+                const rect = el.getBoundingClientRect()
+                const listStyle = this.$refs.list.$el.style
+
+                // Set the width of the list on resize
+                listStyle.width = rect.width + 'px'
+
+                // Set the margin when the prepend prop or slot is populated
+                // (setting the "left" CSS property doesn't work)
+                if (this.$refs.prependDiv) {
+                    const prependRect = this.$refs.prependDiv.getBoundingClientRect()
+                    listStyle.marginLeft = prependRect.width + 'px'
+                }
+            },
+
+            handleHit(evt) {
+                if (typeof this.value !== 'undefined') {
+                    this.$emit('input', evt.text)
+                }
+
+                this.inputValue = evt.text
+                this.$emit('hit', evt.data)
+                this.$refs.input.blur()
+                this.isFocused = false
+            },
+
+            handleBlur(evt) {
+                const tgt = evt.relatedTarget
+                if (tgt && tgt.classList.contains('vbst-item')) {
+                    return
+                }
+                this.isFocused = false
+            },
+
+            handleInput(newValue) {
+                this.inputValue = newValue
+
+                // If v-model is being used, emit an input event
+                if (typeof this.value !== 'undefined') {
+                    this.$emit('input', newValue)
+                }
+            }
+        },
+
+        data() {
+            return {
+                isFocused: false,
+                inputValue: ''
+            }
+        },
+
+        mounted() {
+            this.$_ro = new ResizeObserver(e => {
+                this.resizeList(this.$refs.input)
+            })
+            this.$_ro.observe(this.$refs.input)
+            this.$_ro.observe(this.$refs.list.$el)
+        },
+
+        beforeDestroy() {
+            this.$_ro.disconnect()
         }
-      })
     }
-  },
-
-  methods: {
-    resizeList(el) {
-      const rect = el.getBoundingClientRect()
-      const listStyle = this.$refs.list.$el.style
-
-      // Set the width of the list on resize
-      listStyle.width = rect.width + 'px'
-
-      // Set the margin when the prepend prop or slot is populated
-      // (setting the "left" CSS property doesn't work)
-      if (this.$refs.prependDiv) {
-        const prependRect = this.$refs.prependDiv.getBoundingClientRect()
-        listStyle.marginLeft = prependRect.width + 'px'
-      }
-    },
-
-    handleHit(evt) {
-      if (typeof this.value !== 'undefined') {
-        this.$emit('input', evt.text)
-      }
-
-      this.inputValue = evt.text
-      this.$emit('hit', evt.data)
-      this.$refs.input.blur()
-      this.isFocused = false
-    },
-
-    handleBlur(evt) {
-      const tgt = evt.relatedTarget
-      if (tgt && tgt.classList.contains('vbst-item')) {
-        return
-      }
-      this.isFocused = false
-    },
-
-    handleInput(newValue) {
-      this.inputValue = newValue
-
-      // If v-model is being used, emit an input event
-      if (typeof this.value !== 'undefined') {
-        this.$emit('input', newValue)
-      }
-    }
-  },
-
-  data() {
-    return {
-      isFocused: false,
-      inputValue: ''
-    }
-  },
-
-  mounted() {
-    this.$_ro = new ResizeObserver(e => {
-      this.resizeList(this.$refs.input)
-    })
-    this.$_ro.observe(this.$refs.input)
-    this.$_ro.observe(this.$refs.list.$el)
-  },
-
-  beforeDestroy() {
-    this.$_ro.disconnect()
-  }
-}
 </script>
 
 <style scoped>
