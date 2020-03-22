@@ -95,7 +95,11 @@
             },
             placeholder: String,
             prepend: String,
-            append: String
+            append: String,
+            focus: {
+                type: Boolean,
+                default: false
+            },
         },
 
         computed: {
@@ -150,6 +154,7 @@
                 if (tgt && tgt.classList.contains('vbst-item')) {
                     return
                 }
+                this.$emit('blur', this.inputValue);
                 this.isFocused = false
             },
 
@@ -171,6 +176,8 @@
         },
 
         mounted() {
+            if (this.focus)
+                this.$refs.input.focus();
             this.$_ro = new ResizeObserver(e => {
                 this.resizeList(this.$refs.input)
             })
